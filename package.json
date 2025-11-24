@@ -26,7 +26,8 @@
   },
   "author": "Tomás Migone <tomasmigone@gmail.com>",
   "contributors": [
-    "SpacingBat3 <npm@spacingbat3.anonaddy.com> (https://github.com/SpacingBat3)"
+    "SpacingBat3 <npm@spacingbat3.anonaddy.com> (https://github.com/SpacingBat3)",
+    "Gonzalo Ruiz <foss@rgon.es> (https://github.com/rgon)"
   ],
   "license": "MIT",
   "keywords": [
