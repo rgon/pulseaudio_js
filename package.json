@@ -10,7 +10,6 @@
     "test:unit": "ava",
     "test:e2e": "ava --config ava-e2e.config.cjs",
     "watch": "tsc --watch --project tsconfig.json",
-    "prepare": "husky install",
     "lint": "ts-standard",
     "lint:fix": "ts-standard --fix",
     "pre-commit": "lint-staged",
