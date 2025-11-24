@@ -208,10 +208,10 @@ export default class PAPacket {
     if (chunks.length === 0) {
       return false
     }
-    const chunksSize: number = this.getChunksSize(chunks)
-    const dataLength: number = chunks[0].readUInt32BE(0)
+    const chunksSize: number = this.getChunksSize(chunks as Buffer[])
+    const dataLength: number = (chunks as Buffer[])[0].readUInt32BE(0)
 
-    return this.isChunkHeader(chunks[0]) && chunksSize >= (SectionLength.SIZE + SectionLength.HEADER + dataLength)
+    return this.isChunkHeader((chunks as Buffer[])[0]) && chunksSize >= (SectionLength.SIZE + SectionLength.HEADER + dataLength)
   }
 
   setCommand (value: number): void {
