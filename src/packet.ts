@@ -2,7 +2,7 @@
 // https://github.com/pulseaudio/pulseaudio/blob/master/src/pulsecore/tagstruct.h
 // https://github.com/pulseaudio/pulseaudio/blob/master/src/pulsecore/tagstruct.c
 
-import * as fs from 'fs'
+import * as fs from './fs'
 import { Buffer } from 'buffer'
 
 import { createIterator, Iterator } from './utils/iterator'

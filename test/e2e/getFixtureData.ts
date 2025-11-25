@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 /* eslint-disable import/first */
 require('dotenv').config()
-import * as fs from 'fs'
+import * as fs from 'fs' // '../../src/fs'
 import * as path from 'path'
 import PulseAudio from '../../src/client'
 import { JSONStringify } from '../../src/utils/bigInt'

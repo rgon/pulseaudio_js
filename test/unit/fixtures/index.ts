@@ -1,5 +1,5 @@
 import * as path from 'path'
-import * as fs from 'fs'
+import * as fs from 'fs' // '../../src/fs'
 
 export interface Dictionary<T> {
   [key: string]: T
