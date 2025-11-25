@@ -1,4 +1,5 @@
 import test from 'ava'
+import { Buffer } from 'buffer'
 import { loadFixture, Dictionary, Fixture } from '../fixtures'
 import { GetSink, GetSinkList, SetSinkVolume } from '../../../src/commands/sink'
 import { PA_PROTOCOL_MINIMUM_VERSION } from '../../../src/protocol'

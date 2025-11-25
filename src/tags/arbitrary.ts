@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer'
 import { PATag, PATagType } from './common'
 
 const PA_ARBITRARY_BASE_SIZE = 5

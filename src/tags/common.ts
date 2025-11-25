@@ -1,3 +1,5 @@
+import { Buffer } from 'buffer'
+
 // PulseAudio tag types
 // See https://github.com/pulseaudio/pulseaudio/blob/master/src/pulsecore/tagstruct.h#L41
 export enum PATagType {

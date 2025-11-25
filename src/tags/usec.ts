@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer'
 import { PATag, PATagType } from './common'
 
 const PA_USEC_SIZE = 9

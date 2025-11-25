@@ -1,6 +1,8 @@
 import { EventEmitter } from 'events'
 import { readFileSync } from 'fs'
 import { Socket } from 'net'
+import { Buffer } from 'buffer'
+
 import PAPacket from './packet'
 import PARequest from './request'
 import { PATag } from './tag'

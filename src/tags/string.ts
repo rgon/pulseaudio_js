@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer'
 import { PATag, PATagType } from './common'
 
 const PA_STRING_BASE_SIZE = 2

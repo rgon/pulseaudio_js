@@ -1,4 +1,6 @@
 import test from 'ava'
+import { Buffer } from 'buffer'
+
 import { PA_NATIVE_COMMAND_NAMES } from '../../src/commands'
 import PAPacket, { PA_PACKET_HEADER } from '../../src/packet'
 import { PA_MAX_REQUEST_ID } from '../../src/protocol'

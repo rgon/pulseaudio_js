@@ -1,4 +1,5 @@
 import test from 'ava'
+import { Buffer } from 'buffer'
 import { loadFixture, Dictionary, Fixture } from '../fixtures'
 import { GetSource, GetSourceList, SetSourceVolume } from '../../../src/commands/source'
 import { PA_PROTOCOL_MINIMUM_VERSION } from '../../../src/protocol'

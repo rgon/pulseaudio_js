@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer'
 import { PATag, PATagType } from './common'
 import { ChannelVolume } from '../types/pulseaudio'
 

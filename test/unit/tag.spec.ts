@@ -1,4 +1,6 @@
 import test from 'ava'
+import { Buffer } from 'buffer'
+
 import { PATag, PATagType, PAU32, PABoolean, PAString, PAArbitrary, PAProp, PAPropList, PAChannelMap, PASampleSpec, PAChannelVolume, PAUsec, PAVolume } from '../../src/tag'
 
 interface PATagTestCases<T> {
