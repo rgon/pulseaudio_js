@@ -65,7 +65,7 @@ type GioSocketClientCallback = (client: GioSocketClient, result: GioAsyncResult)
 interface GioSocketClient {
   connect_to_uri_async: (uri: string, default_port: number, cancellable: GioCancellable | null, callback: GioSocketClientCallback, user_data: unknown) => void
   connect_to_uri_finish: (result: GioAsyncResult) => GioSocketConnection
-  connect_async: (connectable: GioSocketConnectable, cancellable: GioCancellable | null, callback: GioSocketClientCallback, user_data: unknown) => void
+  connect_async: ((connectable: GioSocketConnectable, cancellable?: GioCancellable | null) => Promise<GioSocketConnection>) & ((connectable: GioSocketConnectable, cancellable: GioCancellable | null, callback: GioSocketClientCallback | null) => void)
   connect_finish: (result: GioAsyncResult) => GioSocketConnection
 }
 
@@ -493,8 +493,7 @@ class GjsSocket extends EventEmitter {
           this.connecting = false
           this.emit('error', toError(error))
         }
-      },
-      null
+      }
     )
   }
 
