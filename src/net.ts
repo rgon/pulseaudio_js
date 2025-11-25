@@ -60,7 +60,7 @@ type GioAsyncResult = unknown
 type GioSocketClientCallback = (client: GioSocketClient, result: GioAsyncResult) => void
 
 interface GioSocketClient {
-  connect_to_uri_async: (uri: string, cancellable: GioCancellable | null, callback: GioSocketClientCallback) => void
+  connect_to_uri_async: (uri: string, default_port: number, cancellable: GioCancellable | null, callback: GioSocketClientCallback, user_data: unknown) => void
   connect_to_uri_finish: (result: GioAsyncResult) => GioSocketConnection
 }
 
@@ -297,15 +297,28 @@ class GjsSocket extends EventEmitter {
     this.closed = false
     this.destroyed = false
 
-    this.socketClient.connect_to_uri_async(uri, null, (client, result) => {
-      try {
-        const connection = client.connect_to_uri_finish(result)
-        this.onConnected(connection)
-      } catch (error) {
-        this.connecting = false
-        this.emit('error', toError(error))
-      }
-    })
+    // Extract default_port from URI if possible, otherwise use 0
+    let defaultPort = 0
+    const match = uri.match(/^tcp:[^:]+:(\d+)$/)
+    if (match != null) {
+      defaultPort = parseInt(match[1], 10)
+    }
+
+    this.socketClient.connect_to_uri_async(
+      uri,
+      defaultPort,
+      null,
+      (client, result) => {
+        try {
+          const connection = client.connect_to_uri_finish(result)
+          this.onConnected(connection)
+        } catch (error) {
+          this.connecting = false
+          this.emit('error', toError(error))
+        }
+      },
+      null // user_data
+    )
   }
 
   private onConnected (connection: GioSocketConnection): void {
