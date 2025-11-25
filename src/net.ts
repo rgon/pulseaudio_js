@@ -51,17 +51,22 @@ interface GLibNamespace {
 
 interface GioNamespace {
   SocketClient: new () => GioSocketClient
+  UnixSocketAddress?: unknown
 }
 
 type GioCancellable = unknown
 
 type GioAsyncResult = unknown
 
+type GioSocketConnectable = unknown
+
 type GioSocketClientCallback = (client: GioSocketClient, result: GioAsyncResult) => void
 
 interface GioSocketClient {
   connect_to_uri_async: (uri: string, default_port: number, cancellable: GioCancellable | null, callback: GioSocketClientCallback, user_data: unknown) => void
   connect_to_uri_finish: (result: GioAsyncResult) => GioSocketConnection
+  connect_async: (connectable: GioSocketConnectable, cancellable: GioCancellable | null, callback: GioSocketClientCallback, user_data: unknown) => void
+  connect_finish: (result: GioAsyncResult) => GioSocketConnection
 }
 
 interface GioSocketConnection {
@@ -157,6 +162,7 @@ function bytesToUint8Array (bytes: GioBytes, byteArrayModule: ByteArrayModule | 
 // Minimal Socket polyfill for environments without the Node.js `net` module.
 class GjsSocket extends EventEmitter {
   private readonly socketClient: GioSocketClient
+  private readonly unixAddressConstructor: unknown
   private connection: GioSocketConnection | null = null
   private inputStream: GioInputStream | null = null
   private outputStream: GioOutputStream | null = null
@@ -175,6 +181,7 @@ class GjsSocket extends EventEmitter {
     super()
     const modules = getGjsModules()
     this.socketClient = new modules.gio.SocketClient()
+    this.unixAddressConstructor = modules.gio.UnixSocketAddress ?? null
     this.byteArrayModule = modules.byteArray
     this.gioPriority = typeof modules.glib.PRIORITY_DEFAULT === 'number' ? modules.glib.PRIORITY_DEFAULT : 0
   }
@@ -183,31 +190,59 @@ class GjsSocket extends EventEmitter {
   connect (path: string): this
   connect (portOrPath: number | string, host?: string): this {
     if (typeof portOrPath === 'number') {
-      const resolvedHost = typeof host === 'string' && host.length > 0 ? host : 'localhost'
-      const uri = `tcp:${resolvedHost}:${portOrPath}`
-      this.beginConnection(uri)
-      return this
-    }
-
-    const target = portOrPath
-    if (target.startsWith('tcp:')) {
-      const withoutScheme = target.substring(4)
-      const parts = withoutScheme.split(':')
-      const resolvedHost = parts[0] !== undefined && parts[0].length > 0 ? parts[0] : 'localhost'
-      const portString = parts[1]
-      const portValue = portString !== undefined ? Number.parseInt(portString, 10) : Number.NaN
-      if (Number.isNaN(portValue)) {
-        this.emit('error', new Error('Invalid TCP address.'))
+      if (!Number.isFinite(portOrPath) || portOrPath < 0 || portOrPath > 65535) {
+        this.emit('error', new Error('Invalid TCP port.'))
         return this
       }
-      const uri = `tcp:${resolvedHost}:${portValue}`
-      this.beginConnection(uri)
+      const resolvedHost = typeof host === 'string' && host.length > 0 ? host : 'localhost'
+      this.beginTcpConnection(resolvedHost, portOrPath)
       return this
     }
 
-    const normalizedPath = target.startsWith('unix:') ? target.substring(5) : target
-    const uri = `unix:${normalizedPath}`
-    this.beginConnection(uri)
+    const trimmedTarget = portOrPath.trim()
+    if (trimmedTarget.length === 0) {
+      this.emit('error', new Error('Invalid connection target.'))
+      return this
+    }
+
+    if (trimmedTarget.startsWith('unix://')) {
+      const path = trimmedTarget.substring('unix://'.length)
+      this.beginUnixConnection(path.startsWith('/') ? path : `/${path}`)
+      return this
+    }
+
+    if (trimmedTarget.startsWith('unix:')) {
+      this.beginUnixConnection(trimmedTarget.substring(5))
+      return this
+    }
+
+    if (trimmedTarget.startsWith('/')) {
+      this.beginUnixConnection(trimmedTarget)
+      return this
+    }
+
+    if (trimmedTarget.startsWith('tcp://')) {
+      this.connectFromHostPort(trimmedTarget.substring('tcp://'.length))
+      return this
+    }
+
+    if (trimmedTarget.startsWith('tcp:')) {
+      this.connectFromHostPort(trimmedTarget.substring(4))
+      return this
+    }
+
+    const hostPort = this.parseHostPort(trimmedTarget)
+    if (hostPort?.port !== undefined && hostPort.port !== null) {
+      this.beginTcpConnection(hostPort.host, hostPort.port)
+      return this
+    }
+
+    if (hostPort !== null && trimmedTarget.includes(':')) {
+      this.emit('error', new Error('Invalid TCP address.'))
+      return this
+    }
+
+    this.beginUnixConnection(trimmedTarget)
     return this
   }
 
@@ -292,17 +327,87 @@ class GjsSocket extends EventEmitter {
     return this.bufferedLength
   }
 
-  private beginConnection (uri: string): void {
+  private connectFromHostPort (value: string): void {
+    const parsed = this.parseHostPort(value)
+    if (parsed === null || parsed.port === null) {
+      this.emit('error', new Error('Invalid TCP address.'))
+      return
+    }
+    this.beginTcpConnection(parsed.host, parsed.port)
+  }
+
+  private parseHostPort (value: string): { host: string, port: number | null } | null {
+    const trimmed = value.trim()
+    if (trimmed.length === 0) {
+      return null
+    }
+
+    let host = trimmed
+    let portString: string | null = null
+
+    if (trimmed.startsWith('[')) {
+      const closing = trimmed.indexOf(']')
+      if (closing === -1) {
+        return null
+      }
+      host = trimmed.slice(1, closing)
+      const remainder = trimmed.slice(closing + 1)
+      if (remainder.length > 0) {
+        if (!remainder.startsWith(':')) {
+          return null
+        }
+        portString = remainder.slice(1)
+      }
+    } else {
+      const lastColon = trimmed.lastIndexOf(':')
+      const firstColon = trimmed.indexOf(':')
+      if (lastColon !== -1 && firstColon === lastColon) {
+        host = trimmed.slice(0, lastColon)
+        portString = trimmed.slice(lastColon + 1)
+      } else {
+        host = trimmed
+      }
+    }
+
+    if (host.length === 0) {
+      host = 'localhost'
+    }
+
+    let port: number | null = null
+    if (portString !== null) {
+      if (portString.length === 0) {
+        return null
+      }
+      const parsedPort = Number.parseInt(portString, 10)
+      if (Number.isNaN(parsedPort)) {
+        return null
+      }
+      port = parsedPort
+    }
+
+    return { host, port }
+  }
+
+  private formatTcpUri (host: string, port: number): string {
+    const trimmedHost = host.trim()
+    const normalizedHost = trimmedHost.length === 0 ? 'localhost' : trimmedHost
+    const needsBrackets = normalizedHost.includes(':') && !(normalizedHost.startsWith('[') && normalizedHost.endsWith(']'))
+    const hostForUri = needsBrackets ? `[${normalizedHost}]` : normalizedHost
+    return `tcp://${hostForUri}:${port}`
+  }
+
+  private beginTcpConnection (host: string, port: number): void {
+    if (!Number.isFinite(port) || port < 0 || port > 65535) {
+      this.emit('error', new Error('Invalid TCP port.'))
+      return
+    }
+
+    const uri = this.formatTcpUri(host, port)
+    const defaultPort = Math.max(0, Math.min(65535, Math.trunc(port)))
+
     this.connecting = true
     this.closed = false
     this.destroyed = false
-
-    // Extract default_port from URI if possible, otherwise use 0
-    let defaultPort = 0
-    const match = uri.match(/^tcp:[^:]+:(\d+)$/)
-    if (match != null) {
-      defaultPort = parseInt(match[1], 10)
-    }
 
     this.socketClient.connect_to_uri_async(
       uri,
@@ -317,7 +422,79 @@ class GjsSocket extends EventEmitter {
           this.emit('error', toError(error))
         }
       },
-      null // user_data
+      null
+    )
+  }
+
+  private beginUnixConnection (path: string): void {
+    const trimmedPath = path.trim()
+    if (trimmedPath.length === 0) {
+      this.emit('error', new Error('Invalid UNIX socket path.'))
+      return
+    }
+
+    const factory = this.unixAddressConstructor
+    if (factory === null || typeof factory === 'undefined') {
+      this.emit('error', new Error('Unix domain sockets are not supported in this environment.'))
+      return
+    }
+
+    let connectable: GioSocketConnectable | null = null
+    let creationError: unknown = null
+
+    const attemptStaticNew = (argument: unknown): GioSocketConnectable | null => {
+      const maybeNew = (factory as Record<string, unknown>).new
+      if (typeof maybeNew !== 'function') {
+        return null
+      }
+      try {
+        return maybeNew.call(factory, argument)
+      } catch (error) {
+        creationError = error
+        return null
+      }
+    }
+
+    connectable = attemptStaticNew(trimmedPath)
+    if (connectable === null) {
+      connectable = attemptStaticNew({ path: trimmedPath })
+    }
+
+    if (connectable === null && typeof factory === 'function') {
+      try {
+        connectable = new (factory as new (options: { path: string }) => GioSocketConnectable)({ path: trimmedPath })
+      } catch (error) {
+        creationError = error
+      }
+    }
+
+    if (connectable === null) {
+      this.emit('error', toError(creationError ?? new Error('Unable to create UNIX socket address.')))
+      return
+    }
+
+    if (typeof this.socketClient.connect_async !== 'function' || typeof this.socketClient.connect_finish !== 'function') {
+      this.emit('error', new Error('Gio.SocketClient.connect_async is not available in this environment.'))
+      return
+    }
+
+    this.connecting = true
+    this.closed = false
+    this.destroyed = false
+
+    this.socketClient.connect_async(
+      connectable,
+      null,
+      (client, result) => {
+        try {
+          const connection = client.connect_finish(result)
+          this.onConnected(connection)
+        } catch (error) {
+          this.connecting = false
+          this.emit('error', toError(error))
+        }
+      },
+      null
     )
   }
 

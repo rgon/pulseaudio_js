@@ -1,6 +1,6 @@
 {
   "name": "@rgon/pulseaudio_js",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "description": "A TypeScript based client library for PulseAudio & PipeWire-pulse.",
   "main": "build/index.js",
   "types": "build/index.d.ts",
