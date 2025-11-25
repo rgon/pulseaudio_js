@@ -123,25 +123,36 @@ export default class PulseAudio extends EventEmitter {
       } else {
         this.socket.connect(this.address.path)
       }
+
+      console.log('auth cookie is', this.cookie)
+
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
       this.socket.on('connect', async () => {
         this.connected = true
 
-        // Authenticate client
-        const reply: AuthInfo = await this.authenticate()
-        this.protocol = reply.protocol
-        if (this.address.type === 'tcp') {
-          console.log(`Connected to PulseAudio at tcp://${this.address.host}:${this.address.port} using protocol v${this.protocol}`)
-        } else {
-          console.log(`Connected to PulseAudio at unix://${this.address.path} using protocol v${this.protocol}`)
-        }
+        try {
+          // Authenticate client
+          const reply: AuthInfo = await this.authenticate()
+          this.protocol = reply.protocol
+          if (this.address.type === 'tcp') {
+            console.log(`Connected to PulseAudio at tcp://${this.address.host}:${this.address.port} using protocol v${this.protocol}`)
+          } else {
+            console.log(`Connected to PulseAudio at unix://${this.address.path} using protocol v${this.protocol}`)
+          }
 
-        if (reply.protocol < PA_PROTOCOL_MINIMUM_VERSION) {
+          if (reply.protocol < PA_PROTOCOL_MINIMUM_VERSION) {
+            this.disconnect()
+            reject(new Error(`Server protocol version is too low, please update to ${PA_PROTOCOL_MINIMUM_VERSION} or higher.`))
+            return
+          }
+
+          resolve(reply)
+        } catch (error) {
+          console.error('Error during authentication:', error)
+          this.connected = false
           this.disconnect()
-          reject(new Error(`Server protocol version is too low, please update to ${PA_PROTOCOL_MINIMUM_VERSION} or higher.`))
+          reject(error instanceof Error ? error : new Error(String(error)))
         }
-
-        resolve(reply)
       })
       this.socket.on('readable', this.onReadable.bind(this))
       this.socket.on('error', reject)
