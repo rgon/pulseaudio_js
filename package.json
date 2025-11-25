@@ -1,7 +1,7 @@
 {
-  "name": "@tmigone/pulseaudio",
+  "name": "@rgon/pulseaudio_js",
   "version": "2.0.3",
-  "description": "A TypeScript based client library for PulseAudio.",
+  "description": "A TypeScript based client library for PulseAudio & PipeWire-pulse.",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {
@@ -21,7 +21,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tmigone/pulseaudio.git"
+    "url": "git+https://github.com/rgon/pulseaudio_js.git"
   },
   "author": "Tomás Migone <tomasmigone@gmail.com>",
   "contributors": [

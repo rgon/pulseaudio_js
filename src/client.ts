@@ -47,7 +47,7 @@ export interface UnixSocket {
  *
  * @example
  * ```ts
- * import PulseAudio, { Sink } from '@tmigone/pulseaudio'
+ * import PulseAudio, { Sink } from '@rgon/pulseaudio_js'
  *
  * (async () => {
  *   // Connect using tcp socket
