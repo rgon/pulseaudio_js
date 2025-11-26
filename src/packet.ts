@@ -64,7 +64,7 @@ export default class PAPacket {
   command: PAU32
   requestId: PAU32
   tags: Array<PATag<any>> = []
-  private readonly debugPrint: boolean = process.env.DEBUG_PRINT !== undefined
+  private readonly debugPrint: boolean = (typeof process !== 'undefined' && process.env.DEBUG_PRINT !== undefined)
 
   constructor (buffer?: Buffer) {
     if (buffer != null) {
