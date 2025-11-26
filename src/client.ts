@@ -123,17 +123,17 @@ export default class PulseAudio extends EventEmitter {
       } else {
         this.socket.connect(this.address.path)
       }
-
-      console.log('auth cookie is', this.cookie)
-
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
       this.socket.on('connect', async () => {
+        // Has to be set before auth, since authenticate() uses sendRequest(), which checks for this.connected
         this.connected = true
 
         try {
           // Authenticate client
           const reply: AuthInfo = await this.authenticate()
+          console.log('Authentication reply is', reply)
           this.protocol = reply.protocol
+
           if (this.address.type === 'tcp') {
             console.log(`Connected to PulseAudio at tcp://${this.address.host}:${this.address.port} using protocol v${this.protocol}`)
           } else {
@@ -143,15 +143,13 @@ export default class PulseAudio extends EventEmitter {
           if (reply.protocol < PA_PROTOCOL_MINIMUM_VERSION) {
             this.disconnect()
             reject(new Error(`Server protocol version is too low, please update to ${PA_PROTOCOL_MINIMUM_VERSION} or higher.`))
-            return
           }
 
           resolve(reply)
         } catch (error) {
-          console.error('Error during authentication:', error)
-          this.connected = false
+          console.error('Error during authentication:', error.toString())
           this.disconnect()
-          reject(error instanceof Error ? error : new Error(String(error)))
+          reject(error)
         }
       })
       this.socket.on('readable', this.onReadable.bind(this))
